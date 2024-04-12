@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gptify"
+version = "0.1.0"
+description = "Convert code repos into an LLM prompt-friendly format. Forked from https://github.com/zackees/gptrepo"
+authors = ["Wilder Lopes <wilder@ogre.run>"]
+readme = "README.md"
+include = [".gptignore"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyperclip = "^1.8.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+gptify = "gptify.cli:main"
