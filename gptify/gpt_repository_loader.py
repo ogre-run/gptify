@@ -59,6 +59,9 @@ def main() -> int:  # pylint: disable=too-many-statements
         "--openfile", help="open output file after creation", action="store_true"
     )
     parser.add_argument(
+        "--output", help="path to save output file", type=str, default="gptify_output.txt", nargs="?"
+    )
+    parser.add_argument(
         "--write-config",
         help="Write a default config file to the target directory.",
         type=str,
@@ -71,21 +74,21 @@ def main() -> int:  # pylint: disable=too-many-statements
     if sys.platform == "win32":
         ignore_file_path = ignore_file_path.replace("/", "\\")
 
-    if not os.path.exists(ignore_file_path):
+    # if not os.path.exists(ignore_file_path):
         # try and use the .gptignore file in the current directory as a fallback.
-        ignore_file_path = os.path.join(HERE, ".gptignore")
-        assert os.path.exists(ignore_file_path)
-        with open(ignore_file_path, "r") as ignore_file:
-            contents = ignore_file.read()
-        with open(ignore_file_path, "w") as ignore_file:
-            ignore_file.write(contents)
+        # ignore_file_path = os.path.join(HERE, ".gptignore")
+        #assert os.path.exists(ignore_file_path)
+        # with open(ignore_file_path, "r") as ignore_file:
+        #    contents = ignore_file.read()
+        # with open(ignore_file_path, "w") as ignore_file:
+        #    ignore_file.write(contents)
 
     preamble_file = args.preamble
     if os.path.exists(ignore_file_path):
         ignore_list = get_ignore_list(ignore_file_path)
     else:
         ignore_list = []
-    outfile = os.path.abspath("gptify_output.txt")
+    outfile = os.path.abspath(args.output)
     with open(outfile, "w") as output_file:
         if preamble_file:
             with open(preamble_file, "r") as pf:
@@ -96,7 +99,7 @@ def main() -> int:  # pylint: disable=too-many-statements
                 "The following text is a Git repository with code. The structure of the text are sections that begin with ----!@#$----, followed by a single line containing the file path and file name, followed by a variable amount of lines containing the file contents. The text representing the Git repository ends when the symbols --END-- are encounted. Any further text beyond --END-- are meant to be interpreted as instructions using the aforementioned Git repository as context.\n"
             )
         process_repository(repo_path, ignore_list, output_file)
-    outfile = os.path.abspath("gptify_output.txt")
+    outfile = os.path.abspath(args.output)
     with open(outfile, "a") as output_file:
         output_file.write("--END--")
     if not args.clipboard:
