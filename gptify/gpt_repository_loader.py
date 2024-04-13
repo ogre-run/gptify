@@ -74,14 +74,14 @@ def main() -> int:  # pylint: disable=too-many-statements
     if sys.platform == "win32":
         ignore_file_path = ignore_file_path.replace("/", "\\")
 
-    # if not os.path.exists(ignore_file_path):
+    if not os.path.exists(ignore_file_path):
         # try and use the .gptignore file in the current directory as a fallback.
-        # ignore_file_path = os.path.join(HERE, ".gptignore")
-        #assert os.path.exists(ignore_file_path)
-        # with open(ignore_file_path, "r") as ignore_file:
-        #    contents = ignore_file.read()
-        # with open(ignore_file_path, "w") as ignore_file:
-        #    ignore_file.write(contents)
+        ignore_file_path = os.path.join(HERE, ".gptignore")
+        assert os.path.exists(ignore_file_path)
+        with open(ignore_file_path, "r") as ignore_file:
+           contents = ignore_file.read()
+        with open(ignore_file_path, "w") as ignore_file:
+           ignore_file.write(contents)
 
     preamble_file = args.preamble
     if os.path.exists(ignore_file_path):
