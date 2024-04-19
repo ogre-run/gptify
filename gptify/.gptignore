@@ -27,3 +27,8 @@ venv/*
 poetry.lock
 .env
 ogre_dir/*
+.editorconfig
+.flake8
+.pre-commit-config.yaml
+.pylintrc
+.tokeignore
