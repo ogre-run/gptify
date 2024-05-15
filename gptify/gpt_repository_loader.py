@@ -59,7 +59,11 @@ def main() -> int:  # pylint: disable=too-many-statements
         "--openfile", help="open output file after creation", action="store_true"
     )
     parser.add_argument(
-        "--output", help="path to save output file", type=str, default="gptify_output.txt", nargs="?"
+        "--output",
+        help="path to save output file",
+        type=str,
+        default="gptify_output.txt",
+        nargs="?",
     )
     parser.add_argument(
         "--write-config",
@@ -71,6 +75,7 @@ def main() -> int:  # pylint: disable=too-many-statements
 
     repo_path = args.repo_path or os.getcwd()
     ignore_file_path = os.path.join(repo_path, ".gptignore")
+
     if sys.platform == "win32":
         ignore_file_path = ignore_file_path.replace("/", "\\")
 
@@ -79,9 +84,9 @@ def main() -> int:  # pylint: disable=too-many-statements
         ignore_file_path = os.path.join(HERE, ".gptignore")
         assert os.path.exists(ignore_file_path)
         with open(ignore_file_path, "r") as ignore_file:
-           contents = ignore_file.read()
+            contents = ignore_file.read()
         with open(ignore_file_path, "w") as ignore_file:
-           ignore_file.write(contents)
+            ignore_file.write(contents)
 
     preamble_file = args.preamble
     if os.path.exists(ignore_file_path):

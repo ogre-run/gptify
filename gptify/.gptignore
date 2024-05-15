@@ -26,9 +26,10 @@ venv/*
 .DS_Store
 poetry.lock
 .env
-**/ogre_dir/*
+ogre_dir/*
 .editorconfig
 .flake8
 .pre-commit-config.yaml
 .pylintrc
 .tokeignore
+gptify_output.txt
