@@ -1,26 +1,53 @@
 # gptify
 
-This is a fork of [gptrepo](https://github.com/zackess/gptrepo) by zackees. This repo
-implements features that are specific to its utilization inside the [miniogre devtool](https://github.com/ogre-run/miniogre).
+`gptify` is a command-line tool that transforms a Git repository into a single text file suitable for use with Large Language Models (LLMs) like ChatGPT.  It preserves the file structure and content, enabling LLMs to understand and process the codebase for tasks such as code review, documentation generation, and answering questions about the code.  This project is a fork of [gptrepo](https://github.com/zackess/gptrepo) with added features specifically designed for the [miniogre devtool](https://github.com/ogre-run/miniogre).
 
-Usage
-```python
-pip install gptify
-gptify  # now output_gptify.txt should appear in the current directory
+## Relevance
+
+This tool addresses the challenge of effectively using LLMs with codebases.  By converting a repository into a digestible format, `gptify` allows developers to leverage the power of LLMs for various development tasks.  Within the miniogre project, it plays a crucial role in facilitating AI-driven code understanding and interaction.
+
+## Installation
+
+The easiest way
+`pip install gptify`.
+
+`gptify` can also be installed using `pipx`:
+
+```bash
+poetry build && pipx install dist/*.whl
+```
+You can also uninstall older versions using the provided install script: `./install.sh`.
+
+## Usage
+
+After installation, navigate to the root directory of your Git repository and run:
+
+```bash
+gptify
 ```
 
-This tool concatenates through all the files in the repo and adds ai prompts which can be used for chat gpt conversations.
+This command will generate a file named `gptify_output.txt` in the current directory containing the formatted repository content.  You can then copy and paste the contents of this file into a ChatGPT session to interact with your codebase.
 
-Simply open up the file, copy and paste it into the chat gpt window and then ask your question about the code.
+### Options
 
-`gptify` is a command-line tool that converts the contents of a Git repository into a text format, preserving the structure of the files and file contents. The generated output can be interpreted by AI language models, allowing them to process the repository's contents for various tasks, such as code review or documentation generation.
+* `--output <filename>`: Specifies the name of the output file (default: `gptify_output.txt`).
+* `--clipboard`: Copies the output directly to the clipboard, omitting the output file creation.
+* `--openfile`: Opens the output file after creation using the default system application.
+* `--preamble <filepath>`: Prepends a custom preamble to the output file.
+
+## Example with custom output file:
+
+```bash
+gptify --output my_repo.txt
+```
+
+This will generate `my_repo.txt` with the processed repository data.
 
 ## Contributing
 
-As of writing, development in the original repo seems to have been paused. This fork
-implements very specific for use with miniogre.
+While contributions are welcome, the focus of this fork is on specific features for miniogre, and responses to pull requests might be delayed.
 
-Feel free to submit contributions, however, we might be slow to answer to PRs.
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
