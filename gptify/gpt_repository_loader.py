@@ -5,6 +5,7 @@ import fnmatch
 import os
 import sys
 
+import tiktoken
 import pyperclip
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +41,45 @@ def process_repository(repo_path, ignore_list, output_file):
                 output_file.write(f"{relative_file_path}\n")
                 output_file.write(f"{contents}\n")
 
+def load_text(file_path):
+    """Load text from a file."""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return file.read()
+
+def tokenize_text(text, tokenizer):
+    """Tokenize text and return tokenized chunks."""
+    return tokenizer.encode(text)
+
+def chunk_text(tokens, max_tokens, overlap=0):
+    """
+    Chunk tokens into manageable sizes.
+
+    Args:
+        tokens (list): List of tokenized integers.
+        max_tokens (int): Maximum tokens per chunk.
+        overlap (int): Number of tokens to overlap between chunks.
+
+    Returns:
+        list: List of token chunks.
+    """
+    chunks = []
+    start = 0
+    while start < len(tokens):
+        end = start + max_tokens
+        chunks.append(tokens[start:end])
+        start += max_tokens - overlap
+    return chunks
+
+def decode_chunks(chunks, tokenizer):
+    """Decode token chunks back into text."""
+    return [tokenizer.decode(chunk) for chunk in chunks]
+
+def save_chunks(chunks, output_dir):
+    """Save each chunk to a separate file."""
+    for i, chunk in enumerate(chunks):
+        chunk_path = f"{output_dir}/chunk_{i + 1}.txt"
+        with open(chunk_path, 'w', encoding='utf-8') as file:
+            file.write(chunk)
 
 def main() -> int:  # pylint: disable=too-many-statements
     # copy this but using argparse
@@ -60,9 +100,16 @@ def main() -> int:  # pylint: disable=too-many-statements
     )
     parser.add_argument(
         "--output",
-        help="path to save output file",
+        help="Path to save output file",
         type=str,
         default="gptify_output.txt",
+        nargs="?",
+    )
+    parser.add_argument(
+        "--output_dir",
+        help="Output directory for chunks",
+        type=str,
+        default="gptify_output_chunks",
         nargs="?",
     )
     parser.add_argument(
@@ -70,6 +117,23 @@ def main() -> int:  # pylint: disable=too-many-statements
         help="Write a default config file to the target directory.",
         type=str,
         nargs="?",
+    )
+    parser.add_argument(
+        "--chunk",
+        help="Chunk the output file so it can fit the context window of a NLP pipeline. Used in conjuction with `--max_tokens` and `--overlap`",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--max_tokens",
+        help="Maximum tokens per chunk (default = 900000).",
+        type=int,
+        default=900000
+    )
+    parser.add_argument(
+        "--overlap",
+        help="Overlap tokens for context (default = 500).",
+        type=int,
+        default=400
     )
     args = parser.parse_args()
 
@@ -107,22 +171,37 @@ def main() -> int:  # pylint: disable=too-many-statements
     outfile = os.path.abspath(args.output)
     with open(outfile, "a") as output_file:
         output_file.write("--END--")
-    if not args.clipboard:
-        print(f"Repository contents written to {outfile}")
-        if args.openfile:
-            if sys.platform == "win32":
-                os.startfile(outfile)
-            elif sys.platform == "darwin":
-                os.system(f"open {outfile}")
-            else:
-                try:
-                    os.system(f"xdg-open {outfile}")
-                except Exception:  # pylint: disable=broad-except
-                    pass
+    if args.chunk:
+        # Load and process text
+        text = load_text(outfile)
+
+        # Initialize tokenizer
+        tokenizer = tiktoken.get_encoding("cl100k_base")  # Replace with your LLM's tokenizer
+        tokens = tokenize_text(text, tokenizer)
+        token_chunks = chunk_text(tokens, args.max_tokens, args.overlap)
+        text_chunks = decode_chunks(token_chunks, tokenizer)
+        
+        # Save chunks
+        os.makedirs(args.output_dir, exist_ok=True)
+        save_chunks(text_chunks, args.output_dir)
+        print(f"Repository contents written to chunks in directory {args.output_dir}")
+    else:
+        if not args.clipboard:
+            print(f"Repository contents written to {outfile}")
+            if args.openfile:
+                if sys.platform == "win32":
+                    os.startfile(outfile)
+                elif sys.platform == "darwin":
+                    os.system(f"open {outfile}")
+                else:
+                    try:
+                        os.system(f"xdg-open {outfile}")
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            return 0
+        with open(outfile, "r") as output_file:
+            contents = output_file.read()
+        pyperclip.copy(contents)
+        os.remove(outfile)
+        print("Copied to clipboard")
         return 0
-    with open(outfile, "r") as output_file:
-        contents = output_file.read()
-    pyperclip.copy(contents)
-    os.remove(outfile)
-    print("Copied to clipboard")
-    return 0
