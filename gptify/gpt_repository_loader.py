@@ -48,7 +48,8 @@ def load_text(file_path):
 
 def tokenize_text(text, tokenizer):
     """Tokenize text and return tokenized chunks."""
-    return tokenizer.encode(text)
+    return tokenizer.encode(text,
+                            disallowed_special=())
 
 def chunk_text(tokens, max_tokens, overlap=0):
     """
