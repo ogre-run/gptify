@@ -1,4 +1,3 @@
-```markdown
 # gptify
 
 `gptify` is a command-line tool that transforms a Git repository into a single text file or multiple text chunks suitable for use with Large Language Models (LLMs) like ChatGPT. It preserves the file structure and content, enabling LLMs to understand and process the codebase for tasks such as code review, documentation generation, and answering questions about the code. This project is a fork of [gptrepo](https://github.com/zackess/gptrepo) with added features.
@@ -73,4 +72,3 @@ Contributions are welcome.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-```
