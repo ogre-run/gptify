@@ -4,13 +4,12 @@ import argparse
 import fnmatch
 import os
 import sys
-
-import tiktoken
 import pyperclip
+import tiktoken
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-
+# Utility functions
 def get_ignore_list(ignore_file_path):
     ignore_list = []
     with open(ignore_file_path, "r") as ignore_file:
@@ -20,49 +19,32 @@ def get_ignore_list(ignore_file_path):
             ignore_list.append(line.strip())
     return ignore_list
 
-
 def should_ignore(file_path, ignore_list):
     for pattern in ignore_list:
         if fnmatch.fnmatch(file_path, pattern):
             return True
     return False
 
-
 def process_repository(repo_path, ignore_list, output_file):
     for root, _, files in os.walk(repo_path):
         for file in files:
             file_path = os.path.join(root, file)
             relative_file_path = os.path.relpath(file_path, repo_path)
-
             if not should_ignore(relative_file_path, ignore_list):
                 with open(file_path, "r", errors="ignore") as file:
                     contents = file.read()
-                output_file.write("----!@#$----" + "\n")
+                output_file.write("----!@#$----\n")
                 output_file.write(f"{relative_file_path}\n")
                 output_file.write(f"{contents}\n")
 
 def load_text(file_path):
-    """Load text from a file."""
-    with open(file_path, 'r', encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         return file.read()
 
 def tokenize_text(text, tokenizer):
-    """Tokenize text and return tokenized chunks."""
-    return tokenizer.encode(text,
-                            disallowed_special=())
+    return tokenizer.encode(text, disallowed_special=())
 
 def chunk_text(tokens, max_tokens, overlap=0):
-    """
-    Chunk tokens into manageable sizes.
-
-    Args:
-        tokens (list): List of tokenized integers.
-        max_tokens (int): Maximum tokens per chunk.
-        overlap (int): Number of tokens to overlap between chunks.
-
-    Returns:
-        list: List of token chunks.
-    """
     chunks = []
     start = 0
     while start < len(tokens):
@@ -72,137 +54,100 @@ def chunk_text(tokens, max_tokens, overlap=0):
     return chunks
 
 def decode_chunks(chunks, tokenizer):
-    """Decode token chunks back into text."""
     return [tokenizer.decode(chunk) for chunk in chunks]
 
 def save_chunks(chunks, output_dir):
-    """Save each chunk to a separate file."""
     for i, chunk in enumerate(chunks):
-        chunk_path = f"{output_dir}/chunk_{i + 1}.txt"
-        with open(chunk_path, 'w', encoding='utf-8') as file:
+        chunk_path = os.path.join(output_dir, f"chunk_{i + 1}.txt")
+        with open(chunk_path, "w", encoding="utf-8") as file:
             file.write(chunk)
 
-def main() -> int:  # pylint: disable=too-many-statements
-    # copy this but using argparse
-    parser = argparse.ArgumentParser(
-        description="Process a git repository into a single file for chat gpt."
-    )
-    parser.add_argument(
-        "repo_path", help="path to the git repository", type=str, nargs="?"
-    )
-    parser.add_argument(
-        "-p", "--preamble", help="path to the preamble file", type=str, nargs="?"
-    )
-    parser.add_argument(
-        "--clipboard", help="copy the output to the clipboard", action="store_true"
-    )
-    parser.add_argument(
-        "--openfile", help="open output file after creation", action="store_true"
-    )
-    parser.add_argument(
-        "--output",
-        help="Path to save output file",
-        type=str,
-        default="gptify_output.txt",
-        nargs="?",
-    )
-    parser.add_argument(
-        "--output_dir",
-        help="Output directory for chunks",
-        type=str,
-        default="gptify_output_chunks",
-        nargs="?",
-    )
-    parser.add_argument(
-        "--write-config",
-        help="Write a default config file to the target directory.",
-        type=str,
-        nargs="?",
-    )
-    parser.add_argument(
-        "--chunk",
-        help="Chunk the output file so it can fit the context window of a NLP pipeline. Used in conjuction with `--max_tokens` and `--overlap`",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--max_tokens",
-        help="Maximum tokens per chunk (default = 900000).",
-        type=int,
-        default=900000
-    )
-    parser.add_argument(
-        "--overlap",
-        help="Overlap tokens for context (default = 500).",
-        type=int,
-        default=400
-    )
-    args = parser.parse_args()
-
-    repo_path = args.repo_path or os.getcwd()
-    ignore_file_path = os.path.join(repo_path, ".gptignore")
-
+# Main functionality
+def process_git_repository(
+    repo_path,
+    output_path,
+    ignore_file_path=os.path.join(HERE, ".gptignore"),
+    preamble_file=None,
+    chunk_output=False,
+    max_tokens=900000,
+    overlap=400,
+    output_dir=None
+):
+    if not ignore_file_path:
+        ignore_file_path = os.path.join(repo_path, ".gptignore")
     if sys.platform == "win32":
         ignore_file_path = ignore_file_path.replace("/", "\\")
 
     if not os.path.exists(ignore_file_path):
-        # try and use the .gptignore file in the current directory as a fallback.
         ignore_file_path = os.path.join(HERE, ".gptignore")
         assert os.path.exists(ignore_file_path)
-        with open(ignore_file_path, "r") as ignore_file:
-            contents = ignore_file.read()
-        with open(ignore_file_path, "w") as ignore_file:
-            ignore_file.write(contents)
+    ignore_list = get_ignore_list(ignore_file_path) if os.path.exists(ignore_file_path) else []
 
-    preamble_file = args.preamble
-    if os.path.exists(ignore_file_path):
-        ignore_list = get_ignore_list(ignore_file_path)
-    else:
-        ignore_list = []
-    outfile = os.path.abspath(args.output)
-    with open(outfile, "w") as output_file:
+    with open(output_path, "w") as output_file:
         if preamble_file:
             with open(preamble_file, "r") as pf:
                 preamble_text = pf.read()
                 output_file.write(f"{preamble_text}\n")
         else:
             output_file.write(
-                "The following text is a Git repository with code. The structure of the text are sections that begin with ----!@#$----, followed by a single line containing the file path and file name, followed by a variable amount of lines containing the file contents. The text representing the Git repository ends when the symbols --END-- are encounted. Any further text beyond --END-- are meant to be interpreted as instructions using the aforementioned Git repository as context.\n"
+                "The following text is a Git repository with code. The structure of the text are sections that begin with ----!@#$----, followed by a single line containing the file path and file name, followed by a variable amount of lines containing the file contents. The text ends with --END--.\n"
             )
         process_repository(repo_path, ignore_list, output_file)
-    outfile = os.path.abspath(args.output)
-    with open(outfile, "a") as output_file:
         output_file.write("--END--")
-    if args.chunk:
-        # Load and process text
-        text = load_text(outfile)
 
-        # Initialize tokenizer
-        tokenizer = tiktoken.get_encoding("cl100k_base")  # Replace with your LLM's tokenizer
+    if chunk_output:
+        text = load_text(output_path)
+        tokenizer = tiktoken.get_encoding("cl100k_base")
         tokens = tokenize_text(text, tokenizer)
-        token_chunks = chunk_text(tokens, args.max_tokens, args.overlap)
+        token_chunks = chunk_text(tokens, max_tokens, overlap)
         text_chunks = decode_chunks(token_chunks, tokenizer)
-        
-        # Save chunks
-        os.makedirs(args.output_dir, exist_ok=True)
-        save_chunks(text_chunks, args.output_dir)
-        print(f"Repository contents written to chunks in directory {args.output_dir}")
-    else:
-        if not args.clipboard:
-            print(f"Repository contents written to {outfile}")
-            if args.openfile:
-                if sys.platform == "win32":
-                    os.startfile(outfile)
-                elif sys.platform == "darwin":
-                    os.system(f"open {outfile}")
-                else:
-                    try:
-                        os.system(f"xdg-open {outfile}")
-                    except Exception:  # pylint: disable=broad-except
-                        pass
-            return 0
-        with open(outfile, "r") as output_file:
-            contents = output_file.read()
+        os.makedirs(output_dir, exist_ok=True)
+        save_chunks(text_chunks, output_dir)
+
+# CLI
+def main():
+    parser = argparse.ArgumentParser(
+        description="Process a git repository into a single file for chat gpt."
+    )
+    parser.add_argument("repo_path", help="Path to the git repository", type=str, nargs="?")
+    parser.add_argument("-p", "--preamble", help="Path to the preamble file", type=str)
+    parser.add_argument("--clipboard", help="Copy the output to the clipboard", action="store_true")
+    parser.add_argument("--openfile", help="Open the output file after creation", action="store_true")
+    parser.add_argument("--output", help="Path to save the output file", type=str, default="gptify_output.txt")
+    parser.add_argument("--output_dir", help="Directory for chunked output", type=str, default="gptify_output_chunks")
+    parser.add_argument("--chunk", help="Chunk the output file for NLP pipelines", action="store_true")
+    parser.add_argument("--max_tokens", help="Maximum tokens per chunk", type=int, default=900000)
+    parser.add_argument("--overlap", help="Overlap tokens between chunks", type=int, default=400)
+    args = parser.parse_args()
+
+    repo_path = args.repo_path or os.getcwd()
+    output_file = os.path.abspath(args.output)
+    output_dir = os.path.abspath(args.output_dir)
+
+    process_git_repository(
+        repo_path,
+        output_file,
+        preamble_file=args.preamble,
+        chunk_output=args.chunk,
+        max_tokens=args.max_tokens,
+        overlap=args.overlap,
+        output_dir=output_dir,
+    )
+
+    if args.clipboard:
+        contents = load_text(output_file)
         pyperclip.copy(contents)
-        os.remove(outfile)
+        os.remove(output_file)
         print("Copied to clipboard")
-        return 0
+    else:
+        print(f"Repository contents written to {output_file}")
+        if args.openfile:
+            if sys.platform == "win32":
+                os.startfile(output_file)
+            elif sys.platform == "darwin":
+                os.system(f"open {output_file}")
+            else:
+                os.system(f"xdg-open {output_file}")
+
+if __name__ == "__main__":
+    main()
